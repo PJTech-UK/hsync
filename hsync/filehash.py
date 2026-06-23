@@ -580,21 +580,27 @@ class FileHash(object):
     # These comparisons are for the purposes of object storage. They're
     # not effective for comparing the files when determining whether or
     # not to copy them; use compare() for that.
+    #
+    # Identity is the canonical signature-file line (presentation_format()),
+    # so an in-memory object and its on-disk SIG representation agree: same
+    # relative path, mode, user/group *names*, mtime, size and content hash
+    # (plus link target for symlinks). NB this intentionally does not reach
+    # for sha_hash(), which feeds the on-the-wire FINAL checksum and must not
+    # change.
 
     def hash(self):
         if self.hash_value is None:
-            self.hash_value = (self.fullpath, self.size, self.mode,
-                               self.mtime, self.uid, self.gid, self.hashstr)
+            self.hash_value = self.presentation_format()
         return self.hash_value
 
     def strhash(self):
         if self.strhash_value is None:
-            h = hashlib.md5(_hashbytes(repr(self.hash())))
+            h = hashlib.md5(_hashbytes(self.hash()))
             self.strhash_value = h.hexdigest()
         return self.strhash_value
 
     def __hash__(self):
-        return hash(self.strhash())
+        return hash(self.hash())
 
     def __eq__(self, other):
         return self.hash() == other.hash()
