@@ -41,7 +41,8 @@ source. It then writes a **golden baseline** to `golden/<image>/`:
 
 ## Verifying the port
 
-The port is faithful iff the py3.12 run reproduces the py2.7 baseline:
+The port reproduces the 2.7 wire format when the py3.12 run matches the py2.7
+baseline byte-for-byte:
 
 ```sh
 diff -r golden/python_2_7_18-slim golden/python_3_12-slim
