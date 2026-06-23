@@ -130,6 +130,15 @@ def getopts(cmdargs):
                     "checksum the file, which has the effect of rendering it "
                     "invisible (and deletable!) on the client side. On the "
                     "client side, it prevents processing of the path.")
+    meta.add_option("-E", "--exclude", action="append", dest="exclude_files",
+                    metavar="REGEX",
+                    help="Exclude files whose path (relative to the root) "
+                    "matches the given regular expression. May be given more "
+                    "than once; a file is excluded if it matches any pattern. "
+                    "Like -X/--exclude-dir this is applied during the scan, so "
+                    "pass it to BOTH the send and receive sides to ensure "
+                    "matching files are neither transferred nor deleted. "
+                    "Example: --exclude '\\.log$' --exclude '\\.tmp$'")
     meta.add_option("--no-guess-sigfiles", action="store_false",
                     default=True, dest="guess_sigfiles",
                     help="Don't assume files with name "

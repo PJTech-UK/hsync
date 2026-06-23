@@ -78,6 +78,10 @@ class NotADirectoryError(OSError):
 class UnsupportedModeError(CommandLineArgumentsError):
     pass
 
+
+class BadExcludeRegexError(CommandLineArgumentsError):
+    pass
+
 # hashlist.py
 
 

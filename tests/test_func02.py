@@ -399,6 +399,34 @@ class HsyncLocalDiskFuncTestCase(unittest.TestCase):
         # In the fetch, contrib/amd64 should be absent.
         self.assertFalse(self._path_in_list('contrib/amd64', fetchfiles))
 
+    def test_e2e_exclude_file_regex(self):
+        '''Transfer with --exclude regex, check matching files are dropped'''
+        self._unpack_tarball(self.in_tmp, self.zlib_tarball)
+        zlibsrc = os.path.join(self.in_tmp, 'zlib-1.2.8')
+        zlibdst = os.path.join(self.out_tmp, 'zlib-1.2.8')
+
+        # Full scan, then a scan excluding every .h file.
+        (out, err) = self._check_grab_hsync('-S %s -z --scan-debug' % zlibsrc)
+        full_scanfiles = sorted(f[0] for f in self._get_scan_debug(err))
+
+        (out, err) = self._check_grab_hsync(
+            '-S %s -z --exclude \\.h$ --scan-debug' % zlibsrc)
+        scanfiles = sorted(f[0] for f in self._get_scan_debug(err))
+
+        # Fetch, excluding .h on the dest side too so nothing is spuriously
+        # deleted; the fetch list should match the excluded scan.
+        (out, err) = self._check_grab_hsync(
+            '-D %s -u %s -Z --exclude \\.h$ --check-debug' % (zlibdst, zlibsrc))
+        (needed, not_needed) = self._get_check_debug(err)
+        fetchfiles = sorted(f[0] for f in needed)
+
+        # .h files present before, gone after; .c files survive.
+        self.assertNotEquals(full_scanfiles, scanfiles)
+        self.assertTrue(any(f.endswith('.h') for f in full_scanfiles))
+        self.assertFalse(any(f.endswith('.h') for f in scanfiles))
+        self.assertTrue(any(f.endswith('.c') for f in scanfiles))
+        self.assertEquals(scanfiles, fetchfiles)
+
     def test_e2e_excludeglob_dst1(self):
         '''
         Transfer with dest -X glob, check the directory is excluded.

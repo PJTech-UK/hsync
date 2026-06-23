@@ -114,6 +114,16 @@ def hashlist_generate(srcpath, opts, source_mode=True,
     else:
         excdirs = set()
 
+    # Compile the user's file-exclusion regexes once. A file is excluded if its
+    # path (relative to the root) matches any of them.
+    exclude_file_res = []
+    for pat in getattr(opts, 'exclude_files', None) or []:
+        try:
+            exclude_file_res.append(re.compile(pat))
+        except re.error as e:
+            raise BadExcludeRegexError(
+                "Invalid --exclude pattern '%s': %s" % (pat, e))
+
     ##
     # Walk the filesystem.
     ##
@@ -196,6 +206,20 @@ def hashlist_generate(srcpath, opts, source_mode=True,
                     if fi.search(fpath):
                         if source_mode and opts.verbose:
                             print("Ignore:  %s" % fpath)
+                        skipped = True
+                        break
+
+            # User-specified --exclude regexes, matched against the path
+            # relative to the root so patterns behave predictably on both
+            # sides regardless of where the tree is mounted.
+            if not skipped and exclude_file_res:
+                rel_fpath = os.path.join(relroot, filename)
+                for ex in exclude_file_res:
+                    if ex.search(rel_fpath):
+                        if source_mode and opts.verbose:
+                            print("Exclude: %s" % rel_fpath)
+                        log.debug("Exclude file '%s' (matched --exclude '%s')",
+                                  rel_fpath, ex.pattern)
                         skipped = True
                         break
 

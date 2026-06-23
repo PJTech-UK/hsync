@@ -141,3 +141,48 @@ of this article.]
 ignores the file on the source/server, and stops it being sync'd on the
 destination/client side.
 
+`-E` / `--exclude` excludes individual files by regular expression. See
+"Excluding files" below.
+
+
+## Excluding files
+
+There are two ways to keep things out of a sync:
+
+- `-X` / `--exclude-dir` excludes an entire directory, by path or glob.
+- `-E` / `--exclude` excludes individual files whose path matches a regular
+  expression. It may be given more than once; a file is excluded if it matches
+  any of the patterns. This is the simple way to keep particular file *types*
+  out of the signature file.
+
+`--exclude` matches against each file's path **relative to the root**, so
+`\.log$` matches any file ending in `.log`, while `^build/` matches files
+directly under the top-level `build` directory.
+
+Both `-X` and `-E` take effect while scanning the filesystem, and the scan runs
+on **both** sides. To exclude something cleanly, pass the same option to the
+server (`-S`) and the client (`-D`):
+
+    # Server: keep logs and temp files out of the signature file.
+    hsync -S /var/www/site --exclude '\.log$' --exclude '\.tmp$'
+
+    # Client: exclude them here too, so local logs/temp files are left alone.
+    hsync -D /var/tmp/out -u http://127.0.0.1:28080/site \
+        --exclude '\.log$' --exclude '\.tmp$'
+
+More examples:
+
+    # Several file types at once.
+    hsync -S /srv/data --exclude '\.(log|tmp|swp|part)$'
+
+    # Everything under a top-level 'cache' directory.
+    hsync -S /srv/data --exclude '^cache/'
+
+    # A specific filename anywhere in the tree.
+    hsync -S /srv/data --exclude '(^|/)secret\.key$'
+
+**Important:** if you exclude a file on the **source only**, the client never
+sees it in the signature file, treats any local copy as extra, and **deletes
+it** (unless `--no-delete` is given). Pass your `--exclude` patterns to both
+sides to avoid this — the same caveat applies to `--exclude-dir`.
+
