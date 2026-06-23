@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hsync
+  namespace: hsync
+  labels:
+    app.kubernetes.io/name: hsync
+spec:
+  replicas: 1                       # single instance by design
+  strategy:
+    type: Recreate                  # never let two pods write the NFS volume at once
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hsync
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hsync
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        # fsGroup makes the mounted volume group-writable by the pod's user so
+        # hsync (uid 1000) can write received files onto NFS.
+        fsGroup: 1000
+      containers:
+        # ---- Puller: pulls from the lower tier on a loop -------------------
+        - name: hsync
+          image: hsync:latest        # <-- your registry/hsync:tag
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: hsync-config
+            - secretRef:
+                name: hsync-secrets
+                optional: true        # only needed if the source wants auth
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp         # writable /tmp for the heartbeat
+          # Self-healing: restart the puller if it hasn't completed a successful
+          # pull (heartbeat touch) within the window. Keep the window safely
+          # larger than HSYNC_INTERVAL + the longest expected single pull.
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'test $(( $(date +%s) - $(stat -c %Y "${HSYNC_HEARTBEAT:-/tmp/hsync-heartbeat}") )) -lt 1800'
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              # IMPORTANT: hsync buffers each file in memory while fetching, so
+              # this MUST exceed the size of the largest single file you sync
+              # (e.g. a multi-GB package). Raise as needed.
+              memory: "2Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+        # ---- Server: serves the received files to the next tier up ---------
+        # nginx-unprivileged is built to run as an arbitrary non-root uid
+        # (listens on 8080, keeps its pid/temp paths under /tmp), which avoids
+        # the temp-dir failures stock nginx hits under runAsNonRoot.
+        - name: serve
+          image: nginxinc/nginx-unprivileged:alpine
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/nginx/html
+              readOnly: true          # serving must never mutate the data
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hsync-data
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-conf
+          configMap:
+            name: hsync-nginx

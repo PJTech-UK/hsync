@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: hsync
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - nginx-configmap.yaml
+  - pvc.yaml
+  - service.yaml
+  - deployment.yaml
+  - networkpolicy.yaml
+  # secret.yaml is intentionally NOT listed -- create it from
+  # secret.example.yaml out-of-band and keep real creds out of git.
+
+images:
+  - name: hsync
+    newName: your-registry.example.com/hsync
+    newTag: "0.9.82"

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hsync
+  labels:
+    app.kubernetes.io/name: hsync
+    # Label this namespace's tier so the lower/higher tiers' NetworkPolicies can
+    # select it. A HIGH tier is "higher" relative to the one it pulls from.
+    hsync-tier: higher

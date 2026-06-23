@@ -186,3 +186,45 @@ sees it in the signature file, treats any local copy as extra, and **deletes
 it** (unless `--no-delete` is given). Pass your `--exclude` patterns to both
 sides to avoid this — the same caveat applies to `--exclude-dir`.
 
+
+## Running in Docker / Kubernetes
+
+A production container image and a set of Kubernetes manifests live under
+`deploy/`. The image runs the **client** side, pulling from a lower tier into a
+volume and (optionally) serving the result on to the next tier.
+
+### Docker
+
+Build the image (the build context is the repo root):
+
+    docker build -f deploy/Dockerfile -t hsync:latest .
+
+Run a one-shot pull:
+
+    docker run --rm -v /var/tmp/out:/data hsync:latest \
+        hsync -D /data -u http://lower-tier.example.com/
+
+Or run the built-in pull loop (pull, sleep, repeat), configured by environment:
+
+    docker run --rm -v /var/tmp/out:/data \
+        -e HSYNC_SOURCE_URL=http://lower-tier.example.com/ \
+        -e HSYNC_INTERVAL=300 \
+        hsync:latest
+
+### Kubernetes
+
+`deploy/k8s/` is a ready-to-adapt deployment: a single self-healing pod that
+pulls on a loop and serves the received tree (via an nginx sidecar) to the next
+tier, backed by a large ReadWriteMany / NFS volume, with a NetworkPolicy
+enforcing the one-way flow.
+
+    # Edit configmap.yaml (source URL), pvc.yaml (size / StorageClass) and
+    # networkpolicy.yaml (tier selectors), set your image in kustomization.yaml,
+    # then:
+    kubectl apply -k deploy/k8s/
+
+See `deploy/README.md` for the full design and security notes, and — important
+for sizing — the memory caveat: hsync buffers each file in memory while
+fetching it, so the pod's memory limit must exceed the size of the largest
+single file you sync, or it will OOM mid-pull.
+

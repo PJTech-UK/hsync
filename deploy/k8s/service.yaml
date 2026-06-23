@@ -1,0 +1,17 @@
+# Exposes the served tree to the next (higher) tier. ClusterIP only -- this is
+# an internal hop in the security gradient, not something to publish broadly.
+apiVersion: v1
+kind: Service
+metadata:
+  name: hsync
+  namespace: hsync
+  labels:
+    app.kubernetes.io/name: hsync
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hsync
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

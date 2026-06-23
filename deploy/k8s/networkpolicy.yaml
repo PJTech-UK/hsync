@@ -1,0 +1,53 @@
+# Enforce the security gradient at the network layer, backing up hsync's
+# application-level "pull only, never push" guarantee.
+#
+# This pod (a HIGH tier):
+#   - may connect DOWN to the lower tier (to pull) and to DNS  -- egress
+#   - may be connected to FROM the higher tier on 8080 (to be pulled) -- ingress
+#   - may NOT connect up, and the lower tier may NOT connect in.
+#
+# Adjust the namespace/pod selectors to match your tiers. Requires a CNI that
+# enforces NetworkPolicy (Calico, Cilium, etc.).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hsync-one-way
+  namespace: hsync
+  labels:
+    app.kubernetes.io/name: hsync
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hsync
+  policyTypes: ["Ingress", "Egress"]
+
+  ingress:
+    # Only the higher tier may pull from us, and only on the serve port.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              hsync-tier: higher        # <-- label your higher-tier namespace
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress:
+    # DNS resolution.
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Pull from the lower tier only.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              hsync-tier: lower         # <-- label your lower-tier namespace
+      ports:
+        - protocol: TCP
+          port: 80

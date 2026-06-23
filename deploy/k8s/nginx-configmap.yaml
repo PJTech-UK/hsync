@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hsync-nginx
+  namespace: hsync
+  labels:
+    app.kubernetes.io/name: hsync
+data:
+  serve.conf: |
+    # Serve the received tree to the next tier up. Static files only; the SIG
+    # file and every object are fetched by path, so autoindex is optional but
+    # handy for humans.
+    server {
+        listen 8080;
+        server_name _;
+        root /usr/share/nginx/html;
+        autoindex on;
+        access_log /dev/stdout;
+        error_log  /dev/stderr;
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }

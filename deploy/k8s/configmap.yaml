@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hsync-config
+  namespace: hsync
+  labels:
+    app.kubernetes.io/name: hsync
+data:
+  # URL of the LOWER-security tier to pull from. Data flows from here into the
+  # volume; nothing is ever pushed back.
+  HSYNC_SOURCE_URL: "http://hsync-lower.lower-tier.svc.cluster.local/"
+  # Seconds between pulls.
+  HSYNC_INTERVAL: "300"
+  # Non-secret extra args. Secret args (http auth) come from the Secret instead.
+  # Example: exclude transient file types from the sync on this side too.
+  HSYNC_EXTRA_ARGS: "--exclude \\.tmp$ --exclude \\.part$"

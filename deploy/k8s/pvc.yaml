@@ -1,0 +1,19 @@
+# Large volume for received files. ReadWriteMany so the puller and (if you ever
+# split them out) any other reader can share it; NFS is the typical backing.
+#
+# Two ways to wire NFS:
+#   A) point storageClassName at an NFS-provisioning StorageClass (shown here), or
+#   B) drop storageClassName and bind a statically-provisioned NFS PV by label.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hsync-data
+  namespace: hsync
+  labels:
+    app.kubernetes.io/name: hsync
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: nfs            # <-- your NFS StorageClass
+  resources:
+    requests:
+      storage: 500Gi              # <-- size for the largest tree you'll hold
