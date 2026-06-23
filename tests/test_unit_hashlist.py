@@ -112,7 +112,7 @@ class HashListTestCase(unittest.TestCase):
             fhlist = []
             pfx = "0 100644 %s %s 0 0 test" % (self.user, self.group)
 
-            for n in xrange(1000):
+            for n in range(1000):
                 fh = FileHash.init_from_string(pfx + '%0.3i' % n)
                 fhlist.append(fh)
 
@@ -129,14 +129,14 @@ class HashListTestCase(unittest.TestCase):
             fhlist = []
             pfx = "0 100644 %s %s 0 0 test" % (self.user, self.group)
 
-            for n in xrange(1000):
+            for n in range(1000):
                 fh = FileHash.init_from_string(pfx + '%0.3i' % n)
                 fhlist.append(fh)
 
             hl.extend(fhlist)
             self.assertEqual(len(hl), len(fhlist))
 
-            for n in xrange(1000):
+            for n in range(1000):
                 self.assertEqual(hl[n], fhlist[n])
 
 
@@ -189,7 +189,7 @@ class HashDictTestCase(unittest.TestCase):
             fhlist = []
             pfx = "0 100644 %s %s 0 0 test" % (self.user, self.group)
 
-            for n in xrange(1000):
+            for n in range(1000):
                 fh = FileHash.init_from_string(pfx + '%0.3i' % n)
                 fhlist.append(fh)
 
@@ -210,7 +210,7 @@ class HashDictTestCase(unittest.TestCase):
             fhlist = []
             pfx = "0 100644 %s %s 0 0 test" % (self.user, self.group)
 
-            for n in xrange(1000):
+            for n in range(1000):
                 fh = FileHash.init_from_string(pfx + '%0.3i' % n)
                 fhlist.append(fh)
 

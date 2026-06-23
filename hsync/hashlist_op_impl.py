@@ -34,11 +34,11 @@ from random import SystemRandom
 import re
 import sys
 
-from exceptions import *
-from filehash import *
-from hashlist import *
-from utility import (get_hashlist, is_dir_excluded,
-                     is_path_pre_excluded, is_hashfile)
+from .exceptions import *
+from .filehash import *
+from .hashlist import *
+from .utility import (get_hashlist, is_dir_excluded,
+                      is_path_pre_excluded, is_hashfile)
 
 log = logging.getLogger()
 
@@ -297,7 +297,7 @@ def sigfile_write(hashlist, abs_path, opts,
             log.debug("Compressing hashfile '%s' to '%s'",
                       abs_path_tmp, abs_path)
             f_in = open(abs_path_tmp, 'r')
-            f_out = gzip.open(abs_path, 'wb')
+            f_out = gzip.open(abs_path, 'wt')
             f_out.writelines(f_in)
             f_out.close()
             f_in.close()
@@ -321,7 +321,7 @@ def hash_of_hashlist(hashlist):
     log.debug("hash_of_hashlist(): start")
     md = hashlib.sha256()
     for fh in hashlist:
-        md.update(fh.sha_hash())
+        md.update(fh.sha_hash().encode('ascii'))
 
     log.debug("hash_of_hashlist(): end")
     return md.hexdigest()
@@ -410,7 +410,7 @@ def hashlist_check(dstpath, src_hashlist, opts, existing_hashlist=None,
     if opts.set_group:
         mapper.set_default_group(opts.set_group)
 
-    for fpath, fh in src_fdict.iteritems():
+    for fpath, fh in src_fdict.items():
 
         # Generate (pointless) stat.
         if not fh.is_dir and fh.size_is_known:
@@ -463,7 +463,7 @@ def hashlist_check(dstpath, src_hashlist, opts, existing_hashlist=None,
             needed.append(fh)
 
     not_needed = get_hashlist(opts)
-    for fpath, fh in dst_fdict.iteritems():
+    for fpath, fh in dst_fdict.items():
 
         filename = os.path.basename(fpath)
         if filename != '' and \

@@ -35,7 +35,7 @@ import os
 import re
 import shutil
 from subprocess import *
-#import sys
+import sys
 import unittest
 
 from hsync._version import __version__
@@ -76,7 +76,9 @@ class HsyncLocalDiskFuncTestCase(unittest.TestCase):
         if isinstance(opts, str):
             opts = opts.split()
 
-        cmdopt = ['/usr/bin/env', 'python', self.hsync_bin]
+        # Run as a module so the package's relative imports resolve. Running
+        # hsync/hsync.py as a bare script no longer works under Python 3.
+        cmdopt = [sys.executable, '-m', 'hsync.hsync']
         cmdopt.extend(opts)
         return cmdopt
 
@@ -90,6 +92,10 @@ class HsyncLocalDiskFuncTestCase(unittest.TestCase):
         p = Popen(cmdopt, stdout=PIPE, stderr=PIPE, shell=False)
         (out, err) = p.communicate()
         self.assertIsNotNone(p.returncode)
+        # Popen returns bytes; hsync's output is text. Decode at the boundary
+        # so the rest of the harness works with str.
+        out = out.decode('utf-8', 'surrogateescape')
+        err = err.decode('utf-8', 'surrogateescape')
         return (p.returncode, out, err)
 
     def _check_grab_hsync(self, opts, expected_ret=0):
@@ -662,7 +668,8 @@ class HsyncLocalDiskFuncTestCase(unittest.TestCase):
         for f in del_delfiles:
             self.assertTrue(f in srcdel)
 
-        self.assertTrue(del_fetchfiles, [])
+        # Nothing should need fetching: the source only had deletions.
+        self.assertEqual(del_fetchfiles, [])
         for f in srcdel:
             self.assertFalse(os.path.exists(os.path.join(zlibdst, f)))
 

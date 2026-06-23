@@ -31,14 +31,14 @@ import gzip
 import logging
 import os
 import tempfile
-import urlparse
+import urllib.parse
 
-from fetch import fetch_contents
-from filehash import *
-from hashlist_op_impl import (hashlist_generate, sigfile_write,
-                              hashlist_from_stringlist)
-from lockfile import LockFileManager
-from utility import cano_url
+from .fetch import fetch_contents
+from .filehash import *
+from .hashlist_op_impl import (hashlist_generate, sigfile_write,
+                               hashlist_from_stringlist)
+from .lockfile import LockFileManager
+from .utility import cano_url
 
 log = logging.getLogger()
 
@@ -123,7 +123,7 @@ def _generate_hashfile_url(opt):
     if opt.signature_url:
         hashurl = cano_url(opt.signature_url)
         log.debug("Explicit signature URL '%s'", hashurl)
-        up = urlparse.urlparse(hashurl)
+        up = urllib.parse.urlparse(hashurl)
         if up.scheme != 'file':
             raise URLMustBeOfTypeFileError(
                 "Signature URL '%s' must be a local file", hashurl)
@@ -155,9 +155,10 @@ def _read_hashlist(abs_hashfile, opt):
             gziptmp.file.close()
             strfile = []
             for l in gzip.open(gziptmp.name):
-                strfile.append(l.rstrip())
+                strfile.append(l.decode('utf-8', 'surrogateescape').rstrip())
 
     else:
-        strfile = hashfile_contents.splitlines()
+        strfile = hashfile_contents.decode(
+            'utf-8', 'surrogateescape').splitlines()
 
     return hashlist_from_stringlist(strfile, opt, root=opt.source_dir)

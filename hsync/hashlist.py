@@ -30,8 +30,8 @@ from __future__ import print_function
 from collections import OrderedDict
 import logging
 
-from exceptions import *
-from filehash import FileHash
+from .exceptions import *
+from .filehash import FileHash
 
 log = logging.getLogger()
 
@@ -170,7 +170,7 @@ class HashDict(object):
         # the dict will walk the tree in path order, returning the index into
         # the list of FileHash objects.
         self.hd = OrderedDict()
-        for path in sorted(path_to_index.iterkeys()):
+        for path in sorted(path_to_index.keys()):
             self.hd[path] = path_to_index[path]
 
     def __getitem__(self, key):
@@ -191,7 +191,7 @@ class HashDict(object):
     def __iter__(self):
         # if log.isEnabledFor(logging.DEBUG):
         #     log.debug("XXX HashDict.__iter__()")
-        for k in self.hd.iterkeys():
+        for k in self.hd.keys():
             # log.debug("XXX HashDict.__iter__() pre-yield:")
             # self._dumpframe()
             yield k
@@ -203,7 +203,7 @@ class HashDict(object):
         return self.keys_gen()
 
     def keys_gen(self):
-        for k in self.hd.iterkeys():
+        for k in self.hd.keys():
             yield k
 
     def items(self):
@@ -213,5 +213,5 @@ class HashDict(object):
         return self.items_gen()
 
     def items_gen(self):
-        for k, v in self.hd.iteritems():
+        for k, v in self.hd.items():
             yield k, self[k]

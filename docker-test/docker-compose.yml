@@ -1,0 +1,32 @@
+# High <- Low sync harness for hsync.
+#   PY_IMAGE=python:2.7.18-slim  -> current baseline (capture golden SIG)
+#   PY_IMAGE=python:3.12-slim    -> the port (must reproduce the baseline)
+#
+# Usage: ./run.sh   (wraps the build + up + golden capture)
+
+services:
+  low:
+    build:
+      context: ..
+      dockerfile: docker-test/Dockerfile
+      args:
+        PY_IMAGE: ${PY_IMAGE:-python:2.7.18-slim}
+    command: sh /opt/hsync/docker-test/low_entry.sh
+    volumes:
+      - ./data:/srv/data
+    networks: [hsyncnet]
+
+  high:
+    build:
+      context: ..
+      dockerfile: docker-test/Dockerfile
+      args:
+        PY_IMAGE: ${PY_IMAGE:-python:2.7.18-slim}
+    command: sh /opt/hsync/docker-test/high_entry.sh
+    depends_on: [low]
+    volumes:
+      - ./dest:/dest
+    networks: [hsyncnet]
+
+networks:
+  hsyncnet:

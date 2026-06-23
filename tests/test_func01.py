@@ -35,9 +35,11 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 import time
 import unittest
-import urllib2
+import urllib.error
+import urllib.request
 
 from hsync import hsync
 from hsync.exceptions import *
@@ -68,7 +70,7 @@ class HsyncBruteForceFunctionalTestCase(unittest.TestCase):
     def setUpClass(cls):
         oldwd = os.getcwd()
         os.chdir(os.path.dirname(cls.topdir))
-        cmd = "/usr/bin/env python -m SimpleHTTPServer %d" % cls.wport
+        cmd = "%s -m http.server %d" % (sys.executable, cls.wport)
         #fnull = open(os.devnull, 'w')
         fnull = open('server.log', 'w')
         cls.webp = subprocess.Popen(cmd.split(),
@@ -79,10 +81,10 @@ class HsyncBruteForceFunctionalTestCase(unittest.TestCase):
         for n in range(1, 5):
             try:
                 # Don't care about the result, just check for the exception.
-                urllib2.urlopen('http://127.0.0.1:%d/' % cls.wport)
+                urllib.request.urlopen('http://127.0.0.1:%d/' % cls.wport)
                 success = True
                 cls.web_server_running = True
-            except urllib2.URLError:
+            except urllib.error.URLError:
                 log.debug("Waiting for server to start (%d)" % n)
                 time.sleep(1)
         if not success:

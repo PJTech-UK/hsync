@@ -28,7 +28,7 @@
 from __future__ import print_function
 
 import inspect
-import cPickle as pickle
+import pickle
 import os
 import shutil
 import time
@@ -68,7 +68,7 @@ class FileHashCreateFromFilesystemTestCase(unittest.TestCase):
         self.assertTrue(os.path.isfile(fname))
 
         md = hashlib.sha256()
-        md.update(contents)
+        md.update(contents.encode('utf-8'))
         testhash = md.hexdigest()
 
         fh = FileHash.init_from_file(fname, root=self.topdir, defer_read=True)
@@ -86,7 +86,7 @@ class FileHashCreateFromFilesystemTestCase(unittest.TestCase):
         self.assertTrue(os.path.isfile(fname))
 
         md = hashlib.sha256()
-        md.update(contents)
+        md.update(contents.encode('utf-8'))
         testhash = md.hexdigest()
 
         fh = FileHash.init_from_file(fname, root=self.topdir, defer_read=True)
@@ -411,12 +411,16 @@ class FileHashObjectHashableUnitTestcase(unittest.TestCase):
                                        (self.user, self.group))
         self.assertNotEqual(fha, fh, "Mode change => neq")
 
+        # Use 'root' (uid/gid 0) for the differing user/group: object identity
+        # is uid/gid-based, so the alternative name must resolve to a *real*,
+        # distinct id. A non-existent name would map to the default (current)
+        # uid and spuriously compare equal.
         fh = FileHash.init_from_string("0 100644 %s %s 0 0 test" %
-                                       ('user2', self.group))
+                                       ('root', self.group))
         self.assertNotEqual(fha, fh, "User change => neq")
 
         fh = FileHash.init_from_string("0 100644 %s %s 0 0 test" %
-                                       (self.user, 'group2'))
+                                       (self.user, 'root'))
         self.assertNotEqual(fha, fh, "Group change => neq")
 
         fh = FileHash.init_from_string("0 100644 %s %s 1 0 test" %
@@ -434,7 +438,7 @@ class FileHashObjectHashableUnitTestcase(unittest.TestCase):
     def test_equals_file(self):
         tname = os.path.join(self.topdir, 'testfile')
         with open(tname, "wb") as f:
-            f.write("Rhubarb")
+            f.write(b"Rhubarb")
         fha = FileHash.init_from_file(tname)
         orig_st = os.stat(tname) # We'll use this later.
 
@@ -443,13 +447,16 @@ class FileHashObjectHashableUnitTestcase(unittest.TestCase):
 
         tname_1 = tname + '1'
         with open(tname_1, "wb") as f:
-            f.write("Rhubarb")
+            f.write(b"Rhubarb")
         fh = FileHash.init_from_file(tname_1)
         self.assertNotEqual(fha, fh, "Different name, time => neq")
 
-        # Write the same file again, which will change the time.
+        # Write the same file again with an explicitly different mtime. (Don't
+        # rely on the wall clock advancing: both writes can land in the same
+        # integer second, leaving the mtime -- and so the object -- unchanged.)
         with open(tname, "wb") as f:
-            f.write("Rhubarb")
+            f.write(b"Rhubarb")
+        os.utime(tname, (orig_st.st_atime, orig_st.st_mtime + 10))
         fh = FileHash.init_from_file(tname)
         self.assertNotEqual(fha, fh, "Different mtime => neq")
 
@@ -478,7 +485,7 @@ class FileHashObjectPicklableUnitTestcase(unittest.TestCase):
     def test_pickle(self):
         tname = os.path.join(self.topdir, 'testfile_pickle')
         with open(tname, "wb") as f:
-            f.write("Rhubarb")
+            f.write(b"Rhubarb")
         fha = FileHash.init_from_file(tname)
         p = pickle.dumps(fha)
         self.assertIsNotNone(p, "Pickle of FileHash is not None")

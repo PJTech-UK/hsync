@@ -27,16 +27,16 @@
 
 from __future__ import print_function
 
-import cPickle
+import pickle
 import logging
 import os
 import shutil
 import sqlite3
 import tempfile
 
-from exceptions import *
-from filehash import FileHash
-from hashlist import HashList
+from .exceptions import *
+from .filehash import FileHash
+from .hashlist import HashList
 
 log = logging.getLogger()
 
@@ -94,7 +94,7 @@ class SqliteHashList(HashList):
 
     def _insert(self, fh):
         '''Insert the given filehash into the database.'''
-        pdata = cPickle.dumps(fh, cPickle.HIGHEST_PROTOCOL)
+        pdata = pickle.dumps(fh, pickle.HIGHEST_PROTOCOL)
         self.cur.execute('insert into fh (hash, blob) values (:hs, :blob)',
                          {"hs": fh.strhash(), "blob": sqlite3.Binary(pdata)})
 
@@ -104,7 +104,7 @@ class SqliteHashList(HashList):
                          {"hs": hashstr})
         fhlist = []
         for row in self.cur:
-            fhlist.append(cPickle.loads(str(row[0])))
+            fhlist.append(pickle.loads(row[0]))
 
         return fhlist
 

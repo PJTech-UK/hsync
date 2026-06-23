@@ -26,12 +26,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
-import urllib2
+import urllib.request
 
 log = logging.getLogger()
 
 
-class InstrumentedHTTPPassManager(urllib2.HTTPPasswordMgrWithDefaultRealm,
+class InstrumentedHTTPPassManager(urllib.request.HTTPPasswordMgrWithDefaultRealm,
                                   object):
     '''
     Instrumented wrapper around urllib2.HTTPPasswordMgrWithDefaultRealm.

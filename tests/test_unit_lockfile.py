@@ -28,6 +28,7 @@
 from __future__ import print_function
 
 import inspect
+import errno
 import os
 import shutil
 import sys
@@ -103,9 +104,16 @@ class TestUnitLockFileTestCase(unittest.TestCase):
         if lockself:
             testpid = os.getpid()
         else:
-            # Non-existent pid.
+            # Find a pid that genuinely isn't running. A hardcoded value is
+            # unsafe -- in a container it may well be live (it was here).
             testpid = 6666
-            if os.getpid() == testpid:
+            while testpid > 1:
+                if testpid != os.getpid():
+                    try:
+                        os.kill(testpid, 0)
+                    except OSError as e:
+                        if e.errno == errno.ESRCH:
+                            break   # No such process - just what we want.
                 testpid -= 1
 
         if badpid:

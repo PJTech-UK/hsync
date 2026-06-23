@@ -38,8 +38,8 @@ setup(
         license = 'BSD',
         packages = [ 'hsync', ],
 
-        tests_require = [ 'coverage', 'mock', 'nose' ],
-        requires = [ 'urlgrabber', ],
+        python_requires = '>=3.8',
+        tests_require = [ 'pytest', 'coverage' ],
 
         entry_points={
             'console_scripts': [

@@ -32,7 +32,7 @@ import os
 from subprocess import Popen, PIPE
 import sys
 
-from exceptions import *
+from .exceptions import *
 
 
 log = logging.getLogger()
@@ -60,8 +60,7 @@ class LockFile(object):
 
         except OSError as e:
             log.debug("Lockfile open failed: %s", e)
-            i = sys.exc_info()
-            raise i[0], i[1], i[2]
+            raise
 
         print('%s\n%s' % (os.getpid(), sys.argv[0]), file=self.lock)
         self.lock.flush()

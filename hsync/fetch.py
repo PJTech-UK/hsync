@@ -27,21 +27,21 @@
 
 from __future__ import print_function
 
-from BaseHTTPServer import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler
 import hashlib
 import logging
 import os
 import re
 from random import SystemRandom
 import sys
-import urllib
-import urllib2
-import urlparse
+import urllib.error
+import urllib.parse
+import urllib.request
 
-from numformat import IECUnitConverter
-from stats import StatsCollector
-from exceptions import *
-from utility import is_path_included
+from .numformat import IECUnitConverter
+from .stats import StatsCollector
+from .exceptions import *
+from .utility import is_path_included
 
 log = logging.getLogger()
 
@@ -100,7 +100,10 @@ def fetch_contents(fpath, opts, root='', no_trim=False, for_filehash=None,
 
         print('F: %s%s%s' % (fname, progress_spacer, pfx), end='')
 
-    outfile = ''
+    # Accumulate raw bytes: this is used for both the (text) signature file and
+    # for binary file contents, so it must stay bytes. Callers that need the
+    # signature as text decode it explicitly.
+    outfile = b''
 
     try:
         if remote_flag and include_in_total:
@@ -108,13 +111,13 @@ def fetch_contents(fpath, opts, root='', no_trim=False, for_filehash=None,
         else:
             opts.stats.metadata_fetches += 1
 
-        url = urllib2.urlopen(fullpath)
-    except urllib2.HTTPError as e:
+        url = urllib.request.urlopen(fullpath)
+    except urllib.error.HTTPError as e:
         if e.code == 404:
             resp = BaseHTTPRequestHandler.responses
             log.warn("Failed to retrieve '%s': %s", fullpath, resp[404][0])
         return None
-    except urllib2.URLError as e:
+    except urllib.error.URLError as e:
         log.warn("Failed to retrieve '%s': %s", fullpath, e)
         return None
 
@@ -180,7 +183,7 @@ def fetch_contents(fpath, opts, root='', no_trim=False, for_filehash=None,
                 if opts.progress:
                     progstr()
 
-        except urllib2.URLError as e:
+        except urllib.error.URLError as e:
             log.warn("'%s' fetch failed: %s", str(e))
             raise e
 
@@ -295,12 +298,12 @@ def fetch_needed(needed, source, opts):
             else:
                 log.debug("fetch_needed: %s", fh.fpath)
 
-        quoted_fpath = urllib.quote(fh.fpath)
+        quoted_fpath = urllib.parse.quote(fh.fpath)
         if log.isEnabledFor(logging.DEBUG):
             if quoted_fpath != fh.fpath:
                 log.debug("fetch_needed: escaping '%s' -> '%s'",
                           fh.fpath, quoted_fpath)
-        source_url = urlparse.urljoin(source, quoted_fpath)
+        source_url = urllib.parse.urljoin(source, quoted_fpath)
 
         success = False
 

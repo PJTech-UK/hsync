@@ -28,10 +28,10 @@
 import fnmatch
 import logging
 import os
-import urlparse
+import urllib.parse
 
-from hashlist import HashList
-from hashlist_sqlite import SqliteHashList
+from .hashlist import HashList
+from .hashlist_sqlite import SqliteHashList
 
 log = logging.getLogger()
 
@@ -43,7 +43,7 @@ def cano_url(url, slash=False):
     '''
 
     log.debug("cano_url: %s", url)
-    up = urlparse.urlparse(url)
+    up = urllib.parse.urlparse(url)
     log.debug("urlparse: %s", up.geturl())
     if up.scheme == '':
         url = 'file://' + url

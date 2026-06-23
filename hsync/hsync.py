@@ -36,14 +36,14 @@ import optparse
 import os.path
 from stat import *
 import sys
-import urlparse
+import urllib.parse
 
-from dest_impl import dest_side
-from exceptions import *
-from filehash import *
-from idmapper import *
-from source_impl import source_side
-from stats import StatsCollector
+from .dest_impl import dest_side
+from .exceptions import *
+from .filehash import *
+from .idmapper import *
+from .source_impl import source_side
+from .stats import StatsCollector
 
 
 log = logging.getLogger()
@@ -199,7 +199,7 @@ def main(cmdargs):
     (opt, args) = getopts(cmdargs)
 
     if opt.version:
-        from _version import __version__
+        from ._version import __version__
         print("Hsync version %s" % __version__)
         return True
 
@@ -223,21 +223,23 @@ def main(cmdargs):
 
     opt.stats = init_stats()
 
-    # Unbuffering stdout fails if stdout is, for example, a StringIO.
+    # Make stdout line-buffered so progress output appears promptly. Python 3
+    # forbids unbuffered text streams, so use reconfigure(). This fails (as the
+    # old unbuffering did) when stdout is e.g. a StringIO under test.
     try:
-        log.debug("Setting stdout to unbuffered")
-        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    except AttributeError as e:
-        log.debug("Failed to unbuffer stdout, may be in test mode (%s)", e)
+        log.debug("Setting stdout to line-buffered")
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, ValueError) as e:
+        log.debug("Failed to set stdout buffering, may be in test mode (%s)", e)
 
     if opt.source_dir and opt.dest_dir:
         log.error("Send-side and receive-side options can't be mixed")
         return False
 
     if log.isEnabledFor(logging.DEBUG):
-        log.debug("hashlib.algorithms: %s", hashlib.algorithms)
+        log.debug("hashlib.algorithms: %s", hashlib.algorithms_available)
 
-    if 'sha256' not in hashlib.algorithms:
+    if 'sha256' not in hashlib.algorithms_available:
         log.error("No SHA256 implementation in hashlib!")
         return False
 
@@ -261,8 +263,8 @@ def main(cmdargs):
 
         # Try to guess the -u setting if only -U is given.
         if opt.signature_url and not opt.source_url:
-            up = urlparse.urlparse(opt.signature_url)
-            opt.source_url = urlparse.urlunparse([up.scheme, up.netloc,
+            up = urllib.parse.urlparse(opt.signature_url)
+            opt.source_url = urllib.parse.urlunparse([up.scheme, up.netloc,
                                                   os.path.dirname(up.path),
                                                   '', '', ''])
             log.debug("Synthesised source URL '%s' from signature URL '%s'",

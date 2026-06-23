@@ -31,10 +31,23 @@ import os.path
 import re
 from stat import *
 
-from idmapper import *
-from exceptions import *
+from .idmapper import *
+from .exceptions import *
 
 log = logging.getLogger()
+
+
+def _hashbytes(s):
+    '''
+    Encode a str for feeding to hashlib, reproducing Python 2's raw-byte
+    behaviour. Non-ASCII filenames arrive as str decoded with surrogateescape
+    (the filesystem encoding), so encoding back the same way yields the exact
+    bytes Python 2 hashed -- this keeps the signature file's FINAL checksum
+    stable across the 2->3 port. Pass bytes through unchanged.
+    '''
+    if isinstance(s, bytes):
+        return s
+    return s.encode('utf-8', 'surrogateescape')
 
 
 class NotHashableException(Exception):
@@ -328,11 +341,11 @@ class FileHash(object):
         '''
         assert self.hash_safe, "Hash available"
         md = hashlib.sha256()
-        md.update(self.fpath)
-        md.update(str(self.mode))
-        md.update(self.user)
-        md.update(self.group)
-        md.update(self.hashstr)
+        md.update(_hashbytes(self.fpath))
+        md.update(_hashbytes(str(self.mode)))
+        md.update(_hashbytes(self.user))
+        md.update(_hashbytes(self.group))
+        md.update(_hashbytes(self.hashstr))
         return md.hexdigest()
 
     def hash_file(self):
@@ -576,12 +589,12 @@ class FileHash(object):
 
     def strhash(self):
         if self.strhash_value is None:
-            h = hashlib.md5(str(self.hash()))
-            self.strhash_value = h.digest().encode('base64')
+            h = hashlib.md5(_hashbytes(repr(self.hash())))
+            self.strhash_value = h.hexdigest()
         return self.strhash_value
 
     def __hash__(self):
-        return self.strhash()
+        return hash(self.strhash())
 
     def __eq__(self, other):
         return self.hash() == other.hash()

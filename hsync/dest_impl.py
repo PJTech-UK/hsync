@@ -32,16 +32,16 @@ import logging
 import os
 import os.path
 import tempfile
-import urllib2
-import urlparse
+import urllib.parse
+import urllib.request
 
-from fetch import fetch_contents, fetch_needed, delete_not_needed
-from filehash import *
-from hashlist_op_impl import (sigfile_write, hashlist_from_stringlist,
-                              hashlist_check)
-from local_pwmgr import InstrumentedHTTPPassManager
-from lockfile import LockFileManager
-from utility import cano_url
+from .fetch import fetch_contents, fetch_needed, delete_not_needed
+from .filehash import *
+from .hashlist_op_impl import (sigfile_write, hashlist_from_stringlist,
+                               hashlist_check)
+from .local_pwmgr import InstrumentedHTTPPassManager
+from .lockfile import LockFileManager
+from .utility import cano_url
 
 log = logging.getLogger()
 
@@ -106,10 +106,10 @@ def dest_side(opt, args):
 
     if handlers:
         log.debug("Building opener: Handlers %s", handlers)
-        opener = urllib2.build_opener(*handlers)
+        opener = urllib.request.build_opener(*handlers)
 
         log.debug("Installing urllib2 opener: %s", opener)
-        urllib2.install_opener(opener)
+        urllib.request.install_opener(opener)
 
     (hashurl, shortname, compressed_sig) = _configure_hashurl(opt)
 
@@ -133,9 +133,11 @@ def dest_side(opt, args):
             gziptmp.file.close()
             src_strfile = []
             for l in gzip.open(gziptmp.name):
-                src_strfile.append(l.rstrip())
+                src_strfile.append(
+                    l.decode('utf-8', 'surrogateescape').rstrip())
     else:
-        src_strfile = hashfile_contents.splitlines()
+        src_strfile = hashfile_contents.decode(
+            'utf-8', 'surrogateescape').splitlines()
 
     # Release hashfile contents from memory.
     hashfile_contents = None
@@ -178,7 +180,8 @@ def _dest_impl(abs_hashfile, src_hashlist, shortname, opt):
                                            short_name=shortname,
                                            remote_flag=False,
                                            include_in_total=False)
-        dst_strfile = hashfile_contents.splitlines()
+        dst_strfile = hashfile_contents.decode(
+            'utf-8', 'surrogateescape').splitlines()
         existing_hl = hashlist_from_stringlist(dst_strfile, opt,
                                                root=opt.dest_dir)
 
@@ -313,23 +316,23 @@ def _configure_http_auth(opt):
             raise BadAuthSpecificationError(
                 "No password given for user '%s'" % opt.http_user)
 
-        pwmgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        pwmgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
         pwmgr.add_password(None, opt.source_url,
                            opt.http_user, opt.http_pass)
 
         if opt.http_auth_type == 'digest':
             log.debug("Configuring digest authentication")
-            return urllib2.DigestAuthHandler(pwmgr)
+            return urllib.request.HTTPDigestAuthHandler(pwmgr)
 
         else:
             log.debug("Configuring basic authentication")
-            return urllib2.HTTPBasicAuthHandler(pwmgr)
+            return urllib.request.HTTPBasicAuthHandler(pwmgr)
 
 
 def _configure_http_proxy(opt):
     '''
     Configure an HTTP proxy. Return a list of handlers to be given to
-    urllib2.build_opener().
+    urllib.request.build_opener().
 
     '''
 
@@ -337,11 +340,11 @@ def _configure_http_proxy(opt):
     for scheme in ('ftp', 'http', 'https'):
         schemes[scheme] = opt.proxy_url
 
-    host = urlparse.urlsplit(opt.source_url)[1]
+    host = urllib.parse.urlsplit(opt.source_url)[1]
     log.debug("Using '%s' as URI host for '%s'", host, opt.source_url)
 
     log.debug("Installing handlers: %s", schemes)
-    proxy_handler = urllib2.ProxyHandler(schemes)
+    proxy_handler = urllib.request.ProxyHandler(schemes)
 
     if opt.proxy_user and opt.proxy_pass:
         log.debug("Configuring HTTP proxy authentication")
@@ -353,7 +356,7 @@ def _configure_http_proxy(opt):
         pwmgr = InstrumentedHTTPPassManager()
         pwmgr.add_password(None, host, opt.proxy_user, opt.proxy_pass)
 
-        proxy_auth_handler = urllib2.ProxyBasicAuthHandler(pwmgr)
+        proxy_auth_handler = urllib.request.ProxyBasicAuthHandler(pwmgr)
         return (proxy_handler, proxy_auth_handler)
 
     else:
@@ -375,7 +378,7 @@ def _configure_hashurl(opt):
         hashurl = cano_url(opt.signature_url)
         log.debug("Explicit signature URL '%s'", hashurl)
 
-        p_url = urlparse.urlparse(hashurl)
+        p_url = urllib.parse.urlparse(hashurl)
         u_path = p_url.path
         shortname = os.path.basename(u_path)
 
